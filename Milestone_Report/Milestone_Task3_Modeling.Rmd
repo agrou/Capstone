@@ -13,8 +13,6 @@ Understand the distribution and relationship between the words, tokens and phare
 1. Basic n-gram model - predict the next word based on the 1, 2 or 3 words
 2. Build a model to handle unseen n-grams or cases where a particular n-gram isn't observed.
 
-# Questions
-1. How can you efficiently store an n-gram model (think Markov Chains)?
 
 # Summary
 The code below uses the analysis from the file `Milestone:Task2_ExploratoryDataAnalysis`.  
@@ -160,7 +158,7 @@ ggraph(bigram_all_graph, layout = "fr") +
 
 2. How can you use the knowledge about word frequencies to make your model smaller and more efficient?
 
-We can use 50% of the text corpus, instead of using all the text. Since the most frequent words can happen in a lower proportion than less frequent words, using words that occur in a proportion lower than 50% enables to cover combinations of words that are more meaningful in the model. 
+We can use 50% or less percentage, such as 30%, of the bigrams, instead of using all the text. Since the most frequent words can happen in a lower proportion than less frequent words, using words that occur in a proportion lower than 50% enables to cover combinations of words that are more meaningful in the model. 
 
 ```{r}
 BiGrams_Below50 <- BiGrams_count %>%
@@ -193,14 +191,14 @@ ggraph(Below50_Graph, layout = "fr") +
 
 
 ## 3. How many parameters do you need (i.e. how big is n in your n-gram model)?
-To be answered...
+We should be able to get good estimations with a 3-grams model. 
 
 ## 4. Can you think of simple ways to "smooth" the probabilities (think about giving all n-grams a non-zero probability even if they aren't observed in the data) ?
 To be answered...
 
 
 ## 5. How do you evaluate whether your model is any good?
-To be answered...
+Building the model on a "train" set and then testing it on a "test" set. Adding more or less parameters should tells us about the model's accuracy. 
 
 ## 6. How can you use backoff models to estimate the probability of unobserved n-grams?
 
