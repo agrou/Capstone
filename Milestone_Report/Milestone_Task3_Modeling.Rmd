@@ -35,6 +35,7 @@ library(ggthemes)
 library(igraph)
 library(ggraph)
 library(grid)
+library(quanteda)
 ```
 
 Read the data
@@ -84,7 +85,7 @@ pander::pander(head(cleanAll))
 
 ## 1. How can you efficiently store an n-gram model?
 
-We can use a Markov chain to visualize the relationship between words. Markov chain is a model where each choice of word depends only on the previous one. A word is generated considering the most common words following the previous one. For efficiency I will choose only the most common words to store the n-gram model.
+One can use a Markov chain to visualize the relationship between words. Markov chain is a model where each choice of word depends only on the previous one. A word is generated considering the most common words following the previous one. For efficiency I will choose only the most common words to store the n-gram model.
 
 **Bi-grams**
 ```{r bigrams}
