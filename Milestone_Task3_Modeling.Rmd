@@ -129,45 +129,11 @@ BiGrams <- cleanAll %>%
 head(BiGrams)
 ```
 
-**Tri-grams**
-```{r trigrams}
-TriGrams <- cleanAll %>%
-        # Tokenization into bigrams 
-        unnest_tokens(trigram, text, token = "ngrams", n = 3) %>% # separate each line of text into 3-grams 
-        filter(!str_detect(trigram, "\\b[aeiou]{2,}\\b")) %>% # remove all the words with only vowels
-        mutate(
-                trigram = factor(trigram, levels = rev(unique(trigram)))
-                ) %>%
-        count(trigram, sort = TRUE)
-```
-
-To calculate the most common bi-grams we need to separate the column word into two columns
+To calculate the most common bigrams we need to separate the column word into two columns
 ```{r}
 BiGrams_sep <- BiGrams %>% 
         separate(bigram, c("word1", "word2", "word3"), sep = " ")
 BiGrams_sep
-```
-
-```{r}
-TriGrams_sep <- TriGrams %>% 
-        separate(trigram, c("word1", "word2", "word3"), sep = " ")
-```
-
-BiGrams_fil will be a dataset without stop_words as these words are more frequent but not necessarily more important
-```{r}
-BiGrams_fil <- BiGrams_sep %>%
-        filter(!word1 %in% stop_words$word) %>%
-        filter(!word2 %in% stop_words$word)
-BiGrams_fil
-```
-
-Filter observations for common combinations and convert it into a dataframe of edges 
-```{r}
-# use bigrams without stop words
-bigram_graph <- BiGrams_fil %>%
-        filter(n > 400) %>%
-        graph_from_data_frame()
-bigram_graph
 ```
 
 Use all bigrams to build a data frame to be used with a visualization of Markov chains
@@ -176,26 +142,6 @@ bigram_all_graph <- BiGrams_sep %>%
         filter(n > 10100) %>%
         graph_from_data_frame()
 bigram_all_graph
-```
-
-Use all trigrams to build a data frame to be used with a visualization of Markov chains
-```{r}
-trigram_all_graph <- TriGrams_sep %>%
-        filter(n > 1000) %>%
-        graph_from_data_frame()
-trigram_all_graph
-```
-
-Visualizing a network of bigrams without stop words
-```{r}
-set.seed(2017)
-
-ggraph(bigram_graph, layout = "fr") +
-        geom_edge_link(aes(edge_alpha = n), arrow = arrow(length = unit(.10, "inches"), type = "closed")) +
-        geom_node_point(color = "darkgreen", alpha = 0.5, size = 3) +
-        geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
-        ggtitle("Most common bigrams in Twitter, Blogs and News", subtitle = "Each bigram occurs more than 300 times") +
-        theme_void()
 ```
 
 Visualizing a network of all bigrams 
@@ -208,6 +154,33 @@ ggraph(bigram_all_graph, layout = "fr") +
         geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
         ggtitle("Most common bigrams in Twitter, Blogs and News (including stopwords)", subtitle = "Each bigram occurs more than 10000 times") +
         theme_void()
+```
+
+
+**Tri-grams**
+```{r trigrams}
+TriGrams <- cleanAll %>%
+        # Tokenization into bigrams 
+        unnest_tokens(trigram, text, token = "ngrams", n = 3) %>% # separate each line of text into 3-grams 
+        filter(!str_detect(trigram, "\\b[aeiou]{2,}\\b")) %>% # remove all the words with only vowels
+        mutate(
+                trigram = factor(trigram, levels = rev(unique(trigram)))
+                ) %>%
+        count(trigram, sort = TRUE)
+```
+
+To calculate the most common trigrams we need to separate the column word into three columns
+```{r}
+TriGrams_sep <- TriGrams %>% 
+        separate(trigram, c("word1", "word2", "word3"), sep = " ")
+```
+
+Use all trigrams to build a data frame to be used with a visualization of Markov chains
+```{r}
+trigram_all_graph <- TriGrams_sep %>%
+        filter(n > 1000) %>%
+        graph_from_data_frame()
+trigram_all_graph
 ```
 
 Visualizing a network of trigrams 
