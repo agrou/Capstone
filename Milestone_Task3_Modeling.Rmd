@@ -241,7 +241,7 @@ We can estimate probabilities with maximum likelihood estimation (MLE) in a *tra
 
 
 ## 5. How do you evaluate whether your model is any good?
-We will have to compare different N-gram models. This is accomplished by dividing the data in two sets. We train the parameters with two or three models on the training set and then compare how the models fit in the test set. In the end we compare the models by their predictions accuracy.
+We will have to compare different N-gram models. This is accomplished by dividing the data in two sets. We train the parameters with two or three models on the training set and then compare how the models fit in the test set. In the end we compare the models by their predictions accuracy and use perplexity (inverse probability of the *test* set, normalized by the number of words).
 Building models on a "train" set and then testing it on a test set is what will be applied in this scenario though the ideal would be to test in through an application. This would give us a better sense of how much the application is improving. Considering time and memory efficiency, we keep to an intrinsic evalution of the model. 
 
 
