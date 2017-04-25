@@ -22,6 +22,8 @@ The code below uses the analysis from the file `Milestone:Task2_ExploratoryDataA
 For this report I used Julia Silge's Documentation for Tidy Text Mining: http://juliasilge.com/blog/Life-Changing-Magic/
 http://tidytextmining.com/
 Feinerer, Hornik and Meyer. Text Mining Infrastructure in R. Journal of Statistical Software. 2008 (https://www.jstatsoft.org/article/view/v025i05)
+https://web.stanford.edu/%7Ejurafsky/slp3/4.pdf
+
 
 
 Load libraries
@@ -84,12 +86,12 @@ pander::pander(head(cleanAll))
 
 ## 1. How can you efficiently store an n-gram model?
 
-One can use a Markov chain to visualize the relationship between words. Markov chain is a model where each choice of word depends only on the previous one. A word is generated considering the most common words following the previous one. For efficiency I will choose only the most common words to store the n-gram model.
+One can use a Markov chain to visualize the relationship between words. Markov chain is a model where each choice (probability) of a word depends only on the previous one. A word is generated considering the most common words following the previous one. 
 
 We can generate unigrams including stop-words.
 
 **UniGrams**
-```{r bigrams}
+```{r}
 UniGrams <- cleanAll %>%
         # Tokenization into bigrams 
         unnest_tokens(unigram, text, token = "ngrams", n = 1) %>% # separate each line of text into 1-gram 
@@ -116,7 +118,7 @@ UniGrams %>%
 ```
 
 **Bi-grams**
-```{r bigrams}
+```{r}
 BiGrams <- cleanAll %>%
         # Tokenization into bigrams 
         unnest_tokens(bigram, text, token = "ngrams", n = 2) %>% # separate each line of text into 2-grams 
@@ -232,14 +234,16 @@ ggraph(Below50_Graph, layout = "fr") +
 
 
 ## 3. How many parameters do you need (i.e. how big is n in your n-gram model)?
-We should be able to get good estimations with 1 to 3-grams model. Considering conditional probabilities of word occurencies, we can predict next word. 
+We should be able to get good estimations with *N* to 3-grams model. Considering conditional probabilities of word occurencies, we can predict next word. The bigram will look at one word into the past, the trigram looks two words into the past and the N-gram looks *N* - 1 words into past. 
 
 ## 4. Can you think of simple ways to "smooth" the probabilities (think about giving all n-grams a non-zero probability even if they aren't observed in the data) ?
-To be answered...
+We can estimate probabilities with maximum likelihood estimation (MLE) in a *training* set. We can normalise the counts from the text corpus so that they lie between 0 and 1. We can count, for example, all bigrams that share the same first word and consider the counts for that single first word as denominator. Thus if we divide each row/sequence of words by the observed frequency of a prefix we get the relative frequency. One way could be to generate a matrix os probabilities for each word combination and by multiplying all the bigram probabilities of each sentence we get the probability for each of those sentences. The more probabilities we multiply together, the smaller the product becomes. This would generate what is called numerical underflow. To overcome this situation we can use log probabilities instead, adding them all together `(p1 * p2 * p3 * p4 = exp(logp1 + logp2 + logp3 + logp4))` 
 
 
 ## 5. How do you evaluate whether your model is any good?
-Building the model on a "train" set and then testing it on a "test" set. Comparing the model with more or less parameters should tells us about the model's accuracy. 
+We will have to compare different N-gram models. This is accomplished by dividing the data in two sets. We train the parameters with two or three models on the training set and then compare how the models fit in the test set. In the end we compare the models by their predictions accuracy.
+Building models on a "train" set and then testing it on a test set is what will be applied in this scenario though the ideal would be to test in through an application. This would give us a better sense of how much the application is improving. Considering time and memory efficiency, we keep to an intrinsic evalution of the model. 
+
 
 ## 6. How can you use backoff models to estimate the probability of unobserved n-grams?
 
