@@ -1,0 +1,255 @@
+---
+title: "Milestone Report"
+subtitle: "Task 2 and Task 3"
+author: agrou
+date: "26 April 2017"
+output: html_document
+---
+
+# Executive summary
+This report is the first part of Coursera's Capstone Project. **Data source** for this project can be found  [here](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip). 
+Considering the size of the data and to make it more efficient in terms of memory usage, first we start with a **sample** of each dataset `en_US.blog.txt`, `en_US.twitter.txt` and `en_US.news.txt`. Then we join the three datasets into one and **clean** the data by removing html generated characters, punctuation (bullet points and non-common characters). 
+We do **data processing** to tidy data into a suitable format to analyze it by **tokens** of one or more words. After tokenization there is still some cleaning required, as words with repeated vowels can be separated into non-used words (e.g. "iii"). We choose to remove these words from the dataset. `Tidytext` package is used along with `Tidyverse` to link **data processing** with **exploratory data analysis** and from these results we take the next decisions about which models should be used. Following some tips from our *References* section we apply **N-grams** as our Language Modeling to prepare data for prediction analysis. We use **Markov Chains** in a `ggplot2` visualization to understand how the model would predict the following words and from there we draw the plan for the **machine learning** development.
+
+
+Load the data
+```{r downloads, eval = FALSE}
+# define the directory to store the zipfile
+destfile <- "/Documents/Data_Science_Projects/Coursera/JHU_DS/Capstone/Data/Coursera-Swiftkey.zip"
+# save the URL with the zipfile
+fileUrl <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
+# Download the zipfile
+download.file(url = fileUrl, destfile = destfile, method = "curl")
+```
+
+Load libraries
+```{r libraries, message = FALSE}
+library(purrr) # for map function
+library(tidyverse)
+library(tidytext)
+library(stringr)
+library(ggthemes)
+library(gridExtra)
+library(quanteda)
+```
+
+Read the data
+```{r read data}
+# Load the three data sets together
+
+enUS_folder <- "Data/final/en_US/"
+ 
+# create a function to read the three documents in the same file
+read_folder <- function(infolder){
+        tibble(file = dir(infolder, full.names = TRUE)) %>% 
+               mutate(text = map(file, read_lines)) %>% 
+               transmute(id = basename(file), text) %>% 
+               unnest(text)
+}
+
+Corpus <- read_folder(enUS_folder)
+```
+The 3 files combined have 4597879 lines. 
+
+# Data Processing
+
+For computational memory efficiency we can sub-sample each corpus (Twitter, Blogs, News). Thus we take a random sample of 10% of the corpus. 
+```{r}
+# Separate the text corpus in three data sets by id
+Blogs <- Corpus %>% filter(id == "en_US.blogs.txt")  
+News <- Corpus %>% filter(id == "en_US.news.txt")
+Twitter <- Corpus %>% filter(id == "en_US.twitter.txt")
+```
+
+Object sizes for each data set 
+```{r}
+print(object.size(Blogs), units = "MB")
+print(object.size(News), units = "MB")
+print(object.size(Twitter), units = "MB")
+```
+
+Sample 10% of each text corpus
+```{r}
+set.seed(2017)
+# sample each dataset
+Sblogs <- Blogs %>% sample_frac(0.1) 
+Snews <- News %>% sample_frac(0.1)
+Stwitter <- Twitter %>% sample_frac(0.1)
+# get the three datasets into a single dataset
+sampleCorpus <- bind_rows(Sblogs, Snews, Stwitter)
+dim(sampleCorpus)
+```
+
+`sampleCorpus` has the three samples of each text corpus/sources together which corresponds to 10% of the original text corpus. 
+
+The sample is then splited into Training (80%) and Test set(20%). 
+```{r}
+set.seed(2017)
+Train <- sampleCorpus %>% sample_frac(0.8)
+Test  <- anti_join(sampleCorpus, Train)
+```
+
+# Data Cleaning and Tokenization
+```{r data cleaning, tidy = TRUE}
+cleanAll <- function(text_set){
+        # rename the dataset/variable names
+        text_clean <- text_set %>%
+                mutate(id = str_replace_all(id, c("en_US.twitter.txt" = "Twitter", 
+                                             "en_US.news.txt" = "News",
+                                             "en_US.blogs.txt" = "Blogs")), 
+                        #replace strange characters with a space
+               text = str_replace_all(text, "[\r?\n|\røØ\\/\\#:)!?^~&=]|[^a-zA-Z0-9 ']|\\_|\\b[aeiou]{2,}\\b|'\\s+", ""),
+               text = tolower(text)
+               ) 
+        return(text_clean)
+}
+# clean Training data set
+cleanTrain <- cleanAll(Train)
+# clean Testing data set
+cleanTest <- cleanAll(Test)
+```
+
+# Exploratory Data Analysis
+
+How many sentences for each dataset (Train set and Test set)?
+```{r}
+length(cleanTrain$text)
+length(cleanTest$text)
+```
+
+## 1. Some words are more frequent than others - what are the distributions of word frequencies?
+
+I start by transforming the text into single tokens (words/Unigrams).
+
+**words**
+```{r}
+# words by id
+wordToken <- cleanTrain %>%
+        # Tokenization into bigrams 
+        unnest_tokens(unigram, text, token = "ngrams", n = 1) %>% # separate each line of text into 1-gram 
+        filter(!str_detect(unigram, "\\b[aeiou]{2,}\\b")) %>% # remove all the words with only vowels and the very small words
+        mutate(
+                unigram = factor(unigram, levels = rev(unique(unigram)))
+                ) %>%
+        group_by(id, unigram) %>%
+        count(unigram, sort = TRUE)
+wordToken
+```
+
+Compare total unigrams between groups (blogs, news and twitter)
+```{r}
+wordToken %>%
+        group_by(id) %>%
+        summarise(total = sum(n)) %>%
+        ggplot(aes(x = as.factor(id), y = total, fill = id)) +
+        geom_text(aes(label = total), vjust = -0.5) +
+        geom_col(show.legend = FALSE) +
+        labs(title = "Total unigrams/words by source id", x = "source/id") +
+        theme_minimal()
+```
+We can see most words come from Blogs data source. 
+
+Here we see the three datasets have different lenghts, but for the purpose of the exercise of developing a shiny app based on the words that appear more frequently in the text, we'll explore the three datasets together.
+
+===============================================================================
+## 2. What are the frequencies of 2-grams and 3-grams in the dataset?
+*n-grams are consecutive sequences of words*
+
+We've covered words as individual units and considered their frequencies to visualize which were the most common words in the three data sets. Next step is to build figures and tables to understand variation in the frequencies of words and word pairs in the data.
+
+Set function to calculate different sizes of N-grams
+```{r}
+GetGrams <- function(clean_set, value){
+        sentences <- clean_set %>%
+                unnest_tokens(sentence, text, token = "ngrams", n = value) %>%
+                # remove all the words with only vowels
+                filter(!str_detect(sentence, "\\b[aeiou]{2,}\\b")) %>% 
+                mutate(
+                        sentence = factor(sentence, levels = rev(unique(sentence)))
+                ) %>%
+        count(sentence, sort = TRUE) 
+        return(sentences)
+}
+```
+
+**Unigrams**
+```{r}
+UniGram <- GetGrams(cleanTrain, 1)
+UniGram
+```
+
+**Bigrams**
+```{r}
+BiGram <- GetGrams(cleanTrain, 2)
+BiGram
+```
+
+**Trigrams**
+```{r}
+TriGram <- GetGrams(cleanTrain, 3)
+TriGram
+```
+
+**Tetragrams**
+```{r}
+TetraGram <- GetGrams(cleanTrain, 4)
+TetraGram
+```
+
+**Pentagrams**
+```{r}
+PentaGram <- GetGrams(cleanTrain, 5)
+PentaGram
+```
+
+Get all n-grams together and exclude single words as these are not going to be used in the prediction model
+```{r}
+all_ngrams <- c(BiGram, TriGram, TetraGram, PentaGram)
+
+# save n-grams in a csv file to avoid being generated again
+#vector_list <- as.vector(all_ngrams)
+#head(vector_list)
+#write.csv(all_ngrams, 'capstone_ngrams.csv', row.names=FALSE)
+```
+
+```{r}
+ngram_all <- list(BiGram, TriGram, TetraGram, PentaGram)
+#ngramAll <- rbind(BiGram, TriGram, TetraGram, PentaGram)
+
+write.csv(ngram_all, "ngram_all.csv", row.names = FALSE)
+```
+
+```{r}
+load("ngramAll.csv")
+```
+
+===============================================================================
+
+## 3. How many unique words do you need in a frequency sorted dictionary to cover 50% of all word instances in the language? 90%?
+
+```{r, tidy = TRUE}
+# term frequencies and proportion
+termProp <- function(xgrams){
+        tfreq <- xgrams %>% 
+                 mutate(sentence = factor(sentence, levels = rev(unique(sentence))), 
+                        prop = n/sum(n), #create variable with the proportion of word frequency in the text corpus
+               rank = row_number(), #create variable to easily see how many words correspond to the previous calculation
+               cumprop = cumsum(prop)*100) %>% #calculate the cumulative sum of the proportions 
+        arrange(cumprop) %>% #order proportions by descent order
+                filter(cumprop <= 50.1) 
+        return(tfreq)
+}
+       
+termProp(UniGram)
+termProp(BiGram)
+termProp(TriGram)
+termProp(TetraGram)
+termProp(PentaGram)
+```
+
+
+# References
+
+For this report I used Julia Silge's Documentation for Tidy Text Mining: http://juliasilge.com/blog/Life-Changing-Magic/
+http://tidytextmining.com/
+Feinerer, Hornik and Meyer. Text Mining Infrastructure in R. Journal of Statistical Software. 2008 (https://www.jstatsoft.org/article/view/v025i05)
