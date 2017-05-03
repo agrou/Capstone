@@ -311,12 +311,14 @@ We start by visualizing the relationship between words using a Markov chain. Mar
 
 To calculate the most common bigrams we need to separate the column word into two columns
 ```{r}
+
 ngrams_sep <- function(ngrams_set){
-        ngrams_split <- ngrams_set %>%
+        if(ngrams_set %in% BiProp){
+                ngrams_split <- ngrams_set %>%
+                        separate(sentence, c("word1", "word2"), sep = " ")
+        }
 }
-        BiGrams %>% 
-        separate(bigram, c("word1", "word2"), sep = " ")
-BiGrams_sep
+ngrams_sep(TriProp)
 ```
 
 Use all bigrams to build a data frame to be used with a visualization of Markov chains
@@ -339,7 +341,32 @@ ggraph(bigram_all_graph, layout = "fr") +
         theme_void()
 ```
 
+## How many parameters do you need (i.e. how big is n in your n-gram model)?
+We should be able to get good estimations with *N* to 5-grams model. Considering conditional probabilities of word occurencies, we can predict next word. The bigram will look at one word into the past, the trigram looks two words into the past and so on. The N-gram looks *N* - 1 words into past. If we just consider the unigram frequencies we would get a skewed distribution of results. Thus we use a Kneser-ney model to correct predictions in relation to possible words preceding. 
 
+===============================================================================
+## Can you think of simple ways to "smooth" the probabilities (think about giving all n-grams a non-zero probability even if they aren't observed in the data) ?
+We can estimate probabilities with maximum likelihood estimation (MLE) in a *training* set. We can normalise the counts from the text corpus so that they lie between 0 and 1. Count, for example, all bigrams that share the same first word and consider the counts for that single first word as denominator. Thus if we divide each row/sequence of words by the observed frequency of a prefix we get the relative frequency. One way could be to generate a matrix of probabilities for each word combination and by multiplying all the bigram probabilities of each sentence we get the probability for each of those sentences. The more probabilities we multiply together, the smaller the product becomes. This would generate what is called numerical underflow. To overcome this situation we can use log probabilities instead, adding them all together `(p1 * p2 * p3 * p4 = exp(logp1 + logp2 + logp3 + logp4))` 
+
+===============================================================================
+## How do you evaluate whether your model is any good?
+We will have to compare different N-gram models. This is accomplished by dividing the data in two sets. We train the parameters with two or three models on the training set and then compare how the models fit in the test set. In the end we compare the models by their predictions accuracy and use perplexity (inverse probability of the *test* set, normalized by the number of words).
+Building models on a "train" set and then testing it on a test set is what will be applied in this scenario though the ideal would be to test it through an application. This would give us a better sense of how much the application is improving. Considering time and memory efficiency, we keep to an intrinsic evalution of the model. 
+
+===============================================================================
+## How can you use backoff models to estimate the probability of unobserved n-grams?
+
+We can apply a discount method to get words with zero probability. Thus we estimate the third word based on the previous two words. 
+First we create a backoff estimate where we apply a discount to probability estimates (count proportions). This produces results of sets of words with different count probabilities. The corpus is then divided into sets of words such that ngrams have probability equal to zero and sets of words such that trigrams have probability above zero. 
+
+# References
+
+For this report I used:
+
+* Julia Silge's Documentation for Tidy Text Mining: http://juliasilge.com/blog/Life-Changing-Magic/
+http://tidytextmining.com/
+* Feinerer, Hornik and Meyer. Text Mining Infrastructure in R. Journal of Statistical Software. 2008 (https://www.jstatsoft.org/article/view/v025i05)
+* https://web.stanford.edu/%7Ejurafsky/slp3/4.pdf
 # References
 
 For this report I used:
