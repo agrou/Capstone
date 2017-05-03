@@ -285,6 +285,7 @@ save(UniProp, BiProp, TriProp, TetraProp, PentaProp, file = 'nprop.RData')
 Load back the ngrams if not loaded
 ```{r, eval = FALSE}
 load('ngrams.RData')
+load('nprop.RData')
 ```
 
 ===============================================================================
@@ -303,7 +304,7 @@ I would use an english dictionary or a list of english words and match with each
 
 ===============================================================================
 
-# Modeling and prediction analysis
+# Modeling 
 
 ## How can you efficiently store an n-gram model?
 
@@ -313,7 +314,7 @@ To calculate the most common bigrams we need to separate the column word into tw
 ```{r}
 
 ngrams_sep <- function(ngrams_set){
-        if(ngrams_set %in% BiProp){
+        if(ngrams_set %in% TriProp){
                 ngrams_split <- ngrams_set %>%
                         separate(sentence, c("word1", "word2"), sep = " ")
         }
@@ -359,14 +360,6 @@ Building models on a "train" set and then testing it on a test set is what will 
 We can apply a discount method to get words with zero probability. Thus we estimate the third word based on the previous two words. 
 First we create a backoff estimate where we apply a discount to probability estimates (count proportions). This produces results of sets of words with different count probabilities. The corpus is then divided into sets of words such that ngrams have probability equal to zero and sets of words such that trigrams have probability above zero. 
 
-# References
-
-For this report I used:
-
-* Julia Silge's Documentation for Tidy Text Mining: http://juliasilge.com/blog/Life-Changing-Magic/
-http://tidytextmining.com/
-* Feinerer, Hornik and Meyer. Text Mining Infrastructure in R. Journal of Statistical Software. 2008 (https://www.jstatsoft.org/article/view/v025i05)
-* https://web.stanford.edu/%7Ejurafsky/slp3/4.pdf
 # References
 
 For this report I used:
