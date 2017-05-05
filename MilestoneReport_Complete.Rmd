@@ -41,6 +41,7 @@ library(stringr)
 library(ggthemes)
 library(gridExtra)
 library(quanteda)
+library(igraph)
 ```
 
 Read the data
@@ -265,6 +266,7 @@ BiProp <- termProp(BiGram)
 TriProp <- termProp(TriGram)
 TetraProp <- termProp(TetraGram)
 PentaProp <- termProp(PentaGram)
+head(PentaProp)
 ```
 The number of rows (rank) gives us the top 152 unique words that could be used to cover 50% of all word instances in the language. In a frequency sorted disctionary, 50% should be enough to cover all word instances. This is also shown in the histograms above, where the plots present a long tail, with half of the observations skewed. 
 
@@ -312,20 +314,30 @@ We start by visualizing the relationship between words using a Markov chain. Mar
 
 To calculate the most common bigrams we need to separate the column word into two columns
 ```{r}
+BiProp_split <- BiProp %>% 
+        select(sentence, n, cumprop) %>%
+        separate(sentence, c("word1", "word2"), sep = " ") 
+        
+head(BiProp_split)
+``` 
 
-ngrams_sep <- function(ngrams_set){
-        if(ngrams_set %in% TriProp){
-                ngrams_split <- ngrams_set %>%
-                        separate(sentence, c("word1", "word2"), sep = " ")
-        }
-}
-ngrams_sep(TriProp)
+```{r}
+TriProp_split <- TriProp %>%
+                        select(sentence, n, cumprop) %>%
+                        separate(sentence, c("word1", "word2", "word3"), sep = " ")
+head(TriProp_split)
 ```
+
+```{r, tidy = TRUE}
+# Top observations: below 5% (unique words that appear more times)
+BiGrams_top <- BiProp_split %>% filter(cumprop < 5)  
+tail(BiGrams_top)
+```
+5% of bigrams(BiProp_split) correspond to words tha appear more than 3642 times in the text corpus. That's what we use in the Markov network visualization below.
 
 Use all bigrams to build a data frame to be used with a visualization of Markov chains
 ```{r}
-bigram_all_graph <- BiGrams_sep %>%
-        filter(n > 10100) %>%
+bigram_all_graph <- BiGrams_top %>%
         graph_from_data_frame()
 bigram_all_graph
 ```
@@ -338,7 +350,40 @@ ggraph(bigram_all_graph, layout = "fr") +
         geom_edge_link(aes(edge_alpha = n), arrow = arrow(length = unit(.10, "inches"), type = "closed")) +
         geom_node_point(color = "darkgreen", alpha = 0.5, size = 3) +
         geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
-        ggtitle("Most common bigrams in Twitter, Blogs and News (including stopwords)", subtitle = "Each bigram occurs more than 10000 times") +
+        ggtitle("Most common bigrams in Twitter, Blogs and News (including stopwords)", subtitle = "Each bigram occurs more than 3642 times") +
+        theme_void()
+```
+
+```{r}
+PentaProp_split <- PentaProp %>% 
+        select(sentence, n, cumprop) %>%
+        separate(sentence, c("word1", "word2", "word3", "word4", "word5"), sep = " ") 
+        
+head(PentaProp_split)
+``` 
+
+```{r, tidy = TRUE}
+# Top observations: below 5% (unique words that appear more times)
+PentaProp_top <- PentaProp_split %>% filter(cumprop < 0.05)
+head(PentaProp_top)
+tail(PentaProp_top)
+```
+
+```{r}
+pentagram_all_graph <- PentaProp_top %>%
+        graph_from_data_frame()
+pentagram_all_graph
+```
+
+Visualizing a network of all pentagrams 
+```{r}
+set.seed(2017)
+
+ggraph(pentagram_all_graph, layout = "fr") +
+        geom_edge_link(aes(edge_alpha = n), arrow = arrow(length = unit(.10, "inches"), type = "closed")) +
+        geom_node_point(color = "darkgreen", alpha = 0.5, size = 3) +
+        geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
+        ggtitle("Word prediction with pentagrams in Twitter, Blogs and News (including stopwords)", subtitle = "Each pentagram occurs more than 9 times") +
         theme_void()
 ```
 
