@@ -387,6 +387,12 @@ ggraph(pentagram_all_graph, layout = "fr") +
         theme_void()
 ```
 
+## Prediction of the next word
+```{r}
+
+```
+
+
 ## How many parameters do you need (i.e. how big is n in your n-gram model)?
 We should be able to get good estimations with *N* to 5-grams model. Considering conditional probabilities of word occurencies, we can predict next word. The bigram will look at one word into the past, the trigram looks two words into the past and so on. The N-gram looks *N* - 1 words into past. If we just consider the unigram frequencies we would get a skewed distribution of results. Thus we use a Kneser-ney model to correct predictions in relation to possible words preceding. 
 
