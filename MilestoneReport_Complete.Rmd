@@ -17,8 +17,9 @@ As the data was relatively large, a 10% random sample of the following datasets:
 
 `Tidytext` and `Tidyverse` packages were used for **data processing** and **exploratory data analysis**. The first step was to create **tokens** (i.e. mainly words) which were cleaned to removed "non-words" (e.g. repeated vowels "iii" and symbols). The _tidy_ tokens were explored to decide which models should be used. 
 
-Following some tips from our *References* section we apply **N-grams** as our Language Modeling to prepare data for prediction analysis. We use **Markov Chains** in a `ggplot2` visualization to understand how the model would predict the following words and from there we draw the plan for the **machine learning** development.
+**N-grams** Language Modeling was used for prediction _word_ analysis (i.e. predict the following word). **Markov Chains** network visualizations (using `ggplot2`) are used to understand how the model would predict the following words. This approach was used to plan how the **machine learning** model would be developed.
 
+# Data Import
 
 Load the data
 ```{r downloads, eval = FALSE}
