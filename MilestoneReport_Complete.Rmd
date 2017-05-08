@@ -120,6 +120,11 @@ cleanTrain <- cleanAll(Train)
 cleanTest <- cleanAll(Test)
 ```
 
+```{r}
+save(cleanTrain, file = 'cleanTrain.RData')
+```
+
+
 # Exploratory Data Analysis
 
 How many sentences for each dataset (Train set and Test set)?
@@ -387,10 +392,12 @@ ggraph(pentagram_all_graph, layout = "fr") +
         theme_void()
 ```
 
-## Prediction of the next word
+## Confusion matrix - term frequency matrix
+
 ```{r}
 
 ```
+
 
 
 ## How many parameters do you need (i.e. how big is n in your n-gram model)?
