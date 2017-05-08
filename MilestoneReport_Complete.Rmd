@@ -10,9 +10,8 @@ output: html_document
 Understand the distribution and relationship between words, tokens and phrases in the text and build a linguistic predictive model.
 
 # Executive summary
-This report is the first part of Coursera's Capstone Project. 
 
-**Data source** for this project can be found  [here](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip). 
+**Data source** [https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip). 
 
 Considering the size of the data and to make it more efficient in terms of memory usage, first we start with a **sample** of each dataset `en_US.blog.txt`, `en_US.twitter.txt` and `en_US.news.txt`. Then we join the three datasets into one and **clean** the data by removing html generated characters, punctuation (bullet points and non-common characters). 
 
