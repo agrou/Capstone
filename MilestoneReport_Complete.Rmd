@@ -13,9 +13,9 @@ Understand the distribution and relationship between words, tokens and phrases i
 
 **Data source** [https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip). 
 
-As the data was relatively large I used a 10% random sample of the following datasets: `en_US.blog.txt`, `en_US.twitter.txt` and `en_US.news.txt`. These samples were combined and **cleaned** for analysis (e.g. removal of HTML tags, punctuation,bullet points and non-common characters). 
+As the data was relatively large, a 10% random sample of the following datasets: `en_US.blog.txt`, `en_US.twitter.txt` and `en_US.news.txt`. These samples were combined and **cleaned** for analysis (e.g. removal of HTML tags, punctuation,bullet points and non-common characters). 
 
-We do some **data processing** to tidy data into a suitable format to analyze it by **tokens** of one or more words. After tokenization there is still some cleaning required, as words with repeated vowels can be separated into non-used words (e.g. "iii"). We choose to remove these words from the dataset. `Tidytext` package is used along with `Tidyverse` to link **data processing** with **exploratory data analysis** and from these results we take the next decisions about which models should be used. 
+`Tidytext` and `Tidyverse` packages were used for **data processing** and **exploratory data analysis**. The first step was to create **tokens** (i.e. mainly words) which were cleaned to removed "non-words" (e.g. repeated vowels "iii" and symbols). The _tidy_ tokens were explored to decide which models should be used. 
 
 Following some tips from our *References* section we apply **N-grams** as our Language Modeling to prepare data for prediction analysis. We use **Markov Chains** in a `ggplot2` visualization to understand how the model would predict the following words and from there we draw the plan for the **machine learning** development.
 
