@@ -7,7 +7,7 @@ output: html_document
 ---
 
 # Scope
-Understand the distribution and relationship between the words, tokens and phrases in the text and build a linguistic predictive model.
+Understand the distribution and relationship between words, tokens and phrases in the text and build a linguistic predictive model.
 
 # Executive summary
 This report is the first part of Coursera's Capstone Project. 
@@ -40,8 +40,8 @@ library(tidytext)
 library(stringr)
 library(ggthemes)
 library(gridExtra)
-library(quanteda)
 library(igraph)
+library(ggraph)
 ```
 
 Read the data
@@ -65,6 +65,8 @@ The 3 files combined have 4597879 lines.
 # Data Processing
 
 For computational memory efficiency we can sub-sample each corpus (Twitter, Blogs, News). Thus we take a random sample of 10% of the corpus. 
+
+We start by separating the text corpus by id, in three data sets
 ```{r}
 # Separate the text corpus in three data sets by id
 Blogs <- Corpus %>% filter(id == "en_US.blogs.txt")  
@@ -73,11 +75,57 @@ Twitter <- Corpus %>% filter(id == "en_US.twitter.txt")
 ```
 
 Object sizes for each data set 
-```{r}
+```{r, eval = FALSE, echo = FALSE}
 print(object.size(Blogs), units = "MB")
 print(object.size(News), units = "MB")
 print(object.size(Twitter), units = "MB")
 ```
+
+```{r, echo = FALSE}
+CountBlogs <- Blogs %>% 
+        mutate(line = row_number(), lineLength = str_length(text)) %>%
+        summarise(
+                id = "Blogs"
+                ,`N. of Lines` = n()
+                , mean = mean(lineLength)
+                , sd = sd(lineLength)
+                , median = median(lineLength)
+                , min = min(lineLength)
+                , `Longest Line` = max(lineLength)
+                )
+
+CountNews <- News %>% 
+        mutate(line = row_number(), lineLength = str_length(text)) %>%
+        summarise(
+                id = "News"
+                ,`N. of Lines` = n()
+                , mean = mean(lineLength)
+                , sd = sd(lineLength)
+                , median = median(lineLength)
+                , min = min(lineLength)
+                , `Longest Line` = max(lineLength)
+                )
+
+CountTwitter <- Twitter %>% 
+        mutate(line = row_number(), lineLength = str_length(text)) %>%
+        summarise(
+                id = "Twitter"
+                ,`N. of Lines` = n()
+                , mean = mean(lineLength)
+                , sd = sd(lineLength)
+                , median = median(lineLength)
+                , min = min(lineLength)
+                , `Longest Line` = max(lineLength)
+                )
+
+CountAll <- rbind(CountBlogs, CountNews, CountTwitter) %>% mutate(`size (Mb)` = c("255.4", "257.3", "319.4"))
+```
+
+Summary statistics for the raw data 
+```{r, echo = FALSE}
+pander::pander(CountAll)
+```
+The table presents the total number of lines per each data set or source. The mean, sd, median, min, Longest Line (max) are descriptive statistics for string counts. The longest line represents the line with more string characters. As expected it does not come from twitter. 
 
 Sample 10% of each text corpus
 ```{r}
@@ -120,7 +168,8 @@ cleanTrain <- cleanAll(Train)
 cleanTest <- cleanAll(Test)
 ```
 
-```{r}
+Save the file to save memory loading it if needed
+```{r, eval = FALSE}
 save(cleanTrain, file = 'cleanTrain.RData')
 ```
 
@@ -128,12 +177,12 @@ save(cleanTrain, file = 'cleanTrain.RData')
 # Exploratory Data Analysis
 
 How many sentences for each dataset (Train set and Test set)?
-```{r}
+```{r, eval = FALSE}
 length(cleanTrain$text)
 length(cleanTest$text)
 ```
 
-## Some words are more frequent than others - what are the distributions of word frequencies?
+### Some words are more frequent than others - what are the distributions of word frequencies?
 
 I start by transforming the text into single tokens (words/Unigrams).
 
@@ -150,26 +199,28 @@ wordToken <- cleanTrain %>%
                 ) %>%
         group_by(id, unigram) %>%
         count(unigram, sort = TRUE)
-wordToken
+pander::pander(head(wordToken, 5))
 ```
 
 Compare total unigrams between groups (blogs, news and twitter)
-```{r}
+
+```{r, echo = FALSE}
 wordToken %>%
         group_by(id) %>%
         summarise(total = sum(n)) %>%
         ggplot(aes(x = as.factor(id), y = total, fill = id)) +
         geom_text(aes(label = total), vjust = -0.5) +
         geom_col(show.legend = FALSE) +
-        labs(title = "Total unigrams/words by source id", x = "source/id") +
-        theme_fivethirtyeight()
+        labs(title = "Total unigrams/words by id", x = "") +
+        theme_hc()
 ```
-We can see most words come from Blogs data source. 
 
-Here we see the three datasets have different lenghts, but for the purpose of the exercise of developing a shiny app based on the words that appear more frequently in the text, we'll explore the three datasets together.
+Although Blogs file has less lines, we can see most words come from Blogs data source. 
 
-===============================================================================
-## What are the frequencies of 2-grams and 3-grams in the dataset?
+The three datasets have different lenghts, but for the purpose of the exercise of developing a shiny app based on the words that appear more frequently in the text, we'll explore the three datasets together.
+
+
+### What are the frequencies of 2-grams and 3-grams in the dataset?
 *n-grams are consecutive sequences of words*
 
 We've covered words as individual units and considered their frequencies to visualize which were the most common words in the three data sets. Next step is to build figures and tables to understand variation in the frequencies of words and word pairs in the data.
@@ -190,38 +241,37 @@ GetGrams <- function(clean_set, value){
 ```
 
 **Unigrams**
-```{r}
+```{r, echo = FALSE}
 UniGram <- GetGrams(cleanTrain, 1)
-UniGram
+head(UniGram, 3)
 ```
 
 **Bigrams**
-```{r}
+```{r, echo = FALSE}
 BiGram <- GetGrams(cleanTrain, 2)
-BiGram
+head(BiGram, 3)
 ```
 
 **Trigrams**
-```{r}
+```{r, echo = FALSE}
 TriGram <- GetGrams(cleanTrain, 3)
-TriGram
+head(TriGram, 3)
 ```
 
 **Tetragrams**
-```{r}
+```{r, echo = FALSE}
 TetraGram <- GetGrams(cleanTrain, 4)
-TetraGram
+head(TetraGram, 3)
 ```
 
 **Pentagrams**
-```{r}
+```{r, echo = FALSE}
 PentaGram <- GetGrams(cleanTrain, 5)
+head(PentaGram, 3)
 ```
 
 
-===============================================================================
-
-## How many unique words do you need in a frequency sorted dictionary to cover 50% of all word instances in the language? 90%?
+### How many unique words do you need in a frequency sorted dictionary to cover 50% of all word instances in the language? 90%?
 
 ```{r total counts}
 # Total number of words by ID
@@ -231,15 +281,14 @@ TotalWords <- wordToken %>%
 pander::pander(TotalWords)
 ```
 
-```{r total counts in text corpus}
+```{r, echo = FALSE}
 corpus_words <- left_join(wordToken, TotalWords)
-corpus_words
 ```
 
 `n` is the number of times that the word is used in each data set (Twitter, Blogs, News). To look at the distribution of `n/total` for each data set we use the number of times a word appears divided by the total number of terms (words) in that set, which corresponds to the term frequency.
 
-
-```{r plot total proportions}
+Plot word proportions distribution by id
+```{r plot total proportions, echo = FALSE}
 ggplot(corpus_words, aes(n/total, fill = id)) +  
         geom_histogram(show.legend = FALSE) + 
         xlim(NA, 0.000009) + 
@@ -248,7 +297,7 @@ ggplot(corpus_words, aes(n/total, fill = id)) +
 
 The plots exhibit similar distributions for the three data sets. There are many words that occur rarely and fewer that occur frequently. Zip's law states that the frequency that a word appears is inversely proportional to its rank. Thus we consider the proportion of word counts and the cumulative proportion as a probability of word appearance in the text corpus. If we consider 50% of the data it will still cover enough words for prediction.
 
-```{r, tidy = TRUE}
+```{r, echo = TRUE}
 # term frequencies and proportion
 termProp <- function(xgrams){
         tfreq <- xgrams %>% 
@@ -264,91 +313,80 @@ termProp <- function(xgrams){
                 filter(cumprop <= 50.1) 
         return(tfreq)
 }
-       
+``` 
+```{r, echo = FALSE}
 UniProp <- termProp(UniGram)
-UniProp
 BiProp <- termProp(BiGram)
 TriProp <- termProp(TriGram)
 TetraProp <- termProp(TetraGram)
 PentaProp <- termProp(PentaGram)
+```
+```{r}
 head(PentaProp)
 ```
 The number of rows (rank) gives us the top 152 unique words that could be used to cover 50% of all word instances in the language. In a frequency sorted disctionary, 50% should be enough to cover all word instances. This is also shown in the histograms above, where the plots present a long tail, with half of the observations skewed. 
 
 
-Get all n-grams together and exclude unigrams 
-
-```{r}
-all_ngrams <- c(BiGram, TriGram, TetraGram, PentaGram)
-# save n-grams in a .RData file to avoid being generated again
-```
-
 Save ngrams into a single file for memory efficiency
 ```{r, eval = FALSE}
-save(BiGram, TriGram, TetraGram, PentaGram, file = 'ngrams.RData')
+save(UniGram, BiGram, TriGram, TetraGram, PentaGram, file = 'ngrams.RData')
 save(UniProp, BiProp, TriProp, TetraProp, PentaProp, file = 'nprop.RData')
 ```
 
-Load back the ngrams if not loaded
-```{r, eval = FALSE}
+```{r, eval = FALSE, echo = FALSE}
+# Load back the ngrams if not loaded
 load('ngrams.RData')
 load('nprop.RData')
 ```
 
-===============================================================================
 
-## How do you evaluate how many of the words come from foreign languages?
-
+### How do you evaluate how many of the words come from foreign languages?
 
 I would use an english dictionary or a list of english words and match with each sentence/word in the text corpus. For this the hunspell package could be useful to detect words that would not match with the list. These words would be considered foreign words or typed not accordingly. I would keep those in the text still for future predictions with bi-grams and tri-grams, meaning that when more than one non-english word occurs there can be a chance that the next words predicted are non-english words as well. 
 
-===============================================================================
 
-## Can you think of a way to increase the coverage - identifying words that may not be in the corpora or using a smaller number of words in the dictionary to cover the same number of phrases?
+### Can you think of a way to increase the coverage - identifying words that may not be in the corpora or using a smaller number of words in the dictionary to cover the same number of phrases?
 
 * Generate term-frequency matrices with ngrams and run a prediction model on it. 
 * Use a Markov chain as a measure to save memory and randomly predict n-grams.
 
-===============================================================================
 
-# Modeling 
+# Text Modeling 
 
-## How can you efficiently store an n-gram model?
+### How can you efficiently store an n-gram model?
 
 We start by visualizing the relationship between words using a Markov chain. Markov chain is a model where each choice (probability) of a word depends only on the previous one. A word is generated considering the most common words following the previous one. 
 
-To calculate the most common bigrams we need to separate the column word into two columns
+To calculate the most common ngrams we need to separate the column word into *N* columns
 ```{r}
 BiProp_split <- BiProp %>% 
         select(sentence, n, cumprop) %>%
         separate(sentence, c("word1", "word2"), sep = " ") 
-        
-head(BiProp_split)
 ``` 
 
 ```{r}
 TriProp_split <- TriProp %>%
                         select(sentence, n, cumprop) %>%
                         separate(sentence, c("word1", "word2", "word3"), sep = " ")
-head(TriProp_split)
 ```
 
-```{r, tidy = TRUE}
+```{r}
 # Top observations: below 5% (unique words that appear more times)
 BiGrams_top <- BiProp_split %>% filter(cumprop < 5)  
 tail(BiGrams_top)
 ```
 5% of bigrams(BiProp_split) correspond to words tha appear more than 3642 times in the text corpus. That's what we use in the Markov network visualization below.
 
-Use all bigrams to build a data frame to be used with a visualization of Markov chains
+Use all bigrams to build a suitable data frame to be used with a visualization of Markov chains
 ```{r}
 bigram_all_graph <- BiGrams_top %>%
         graph_from_data_frame()
-bigram_all_graph
 ```
 
 Visualizing a network of all bigrams 
-```{r}
+
+
+```{r, echo = FALSE}
 set.seed(2017)
 
 ggraph(bigram_all_graph, layout = "fr") +
@@ -359,29 +397,27 @@ ggraph(bigram_all_graph, layout = "fr") +
         theme_void()
 ```
 
+Split pentagrams into one word per column
 ```{r}
 PentaProp_split <- PentaProp %>% 
         select(sentence, n, cumprop) %>%
         separate(sentence, c("word1", "word2", "word3", "word4", "word5"), sep = " ") 
-        
-head(PentaProp_split)
 ``` 
 
-```{r, tidy = TRUE}
+```{r}
 # Top observations: below 5% (unique words that appear more times)
 PentaProp_top <- PentaProp_split %>% filter(cumprop < 0.05)
-head(PentaProp_top)
-tail(PentaProp_top)
 ```
 
-```{r}
+```{r, echo = FALSE}
 pentagram_all_graph <- PentaProp_top %>%
         graph_from_data_frame()
-pentagram_all_graph
 ```
 
 Visualizing a network of all pentagrams 
-```{r}
+
+
+```{r, echo = FALSE}
 set.seed(2017)
 
 ggraph(pentagram_all_graph, layout = "fr") +
@@ -392,31 +428,23 @@ ggraph(pentagram_all_graph, layout = "fr") +
         theme_void()
 ```
 
-## Confusion matrix - term frequency matrix
-
-```{r}
-
-```
-
-
-
-## How many parameters do you need (i.e. how big is n in your n-gram model)?
+### How many parameters do you need (i.e. how big is n in your n-gram model)?
 We should be able to get good estimations with *N* to 5-grams model. Considering conditional probabilities of word occurencies, we can predict next word. The bigram will look at one word into the past, the trigram looks two words into the past and so on. The N-gram looks *N* - 1 words into past. If we just consider the unigram frequencies we would get a skewed distribution of results. Thus we use a Kneser-ney model to correct predictions in relation to possible words preceding. 
 
-===============================================================================
-## Can you think of simple ways to "smooth" the probabilities (think about giving all n-grams a non-zero probability even if they aren't observed in the data) ?
+
+### Can you think of simple ways to "smooth" the probabilities (think about giving all n-grams a non-zero probability even if they aren't observed in the data) ?
 We can estimate probabilities with maximum likelihood estimation (MLE) in a *training* set. We can normalise the counts from the text corpus so that they lie between 0 and 1. Count, for example, all bigrams that share the same first word and consider the counts for that single first word as denominator. Thus if we divide each row/sequence of words by the observed frequency of a prefix we get the relative frequency. One way could be to generate a matrix of probabilities for each word combination and by multiplying all the bigram probabilities of each sentence we get the probability for each of those sentences. The more probabilities we multiply together, the smaller the product becomes. This would generate what is called numerical underflow. To overcome this situation we can use log probabilities instead, adding them all together `(p1 * p2 * p3 * p4 = exp(logp1 + logp2 + logp3 + logp4))` 
 
-===============================================================================
-## How do you evaluate whether your model is any good?
+
+### How do you evaluate whether your model is any good?
 We will have to compare different N-gram models. This is accomplished by dividing the data in two sets. We train the parameters with two or three models on the training set and then compare how the models fit in the test set. In the end we compare the models by their predictions accuracy and use perplexity (inverse probability of the *test* set, normalized by the number of words).
 Building models on a "train" set and then testing it on a test set is what will be applied in this scenario though the ideal would be to test it through an application. This would give us a better sense of how much the application is improving. Considering time and memory efficiency, we keep to an intrinsic evalution of the model. 
 
-===============================================================================
-## How can you use backoff models to estimate the probability of unobserved n-grams?
+
+### How can you use backoff models to estimate the probability of unobserved n-grams?
 
 We can apply a discount method to get words with zero probability. Thus we estimate the third word based on the previous two words. 
-First we create a backoff estimate where we apply a discount to probability estimates (count proportions). This produces results of sets of words with different count probabilities. The corpus is then divided into sets of words such that ngrams have probability equal to zero and sets of words such that trigrams have probability above zero. 
+First we create a backoff estimate where we apply a discount to probability estimates (count proportions). This produces results of sets of words with different count probabilities.  
 
 # References
 
@@ -426,3 +454,144 @@ For this report I used:
 http://tidytextmining.com/
 * Feinerer, Hornik and Meyer. Text Mining Infrastructure in R. Journal of Statistical Software. 2008 (https://www.jstatsoft.org/article/view/v025i05)
 * https://web.stanford.edu/%7Ejurafsky/slp3/4.pdf
+
+
+# Appendix
+
+Below is the code that was used for some of the output above
+
+Object sizes for each data set 
+```{r, eval = FALSE, echo = TRUE}
+print(object.size(Blogs), units = "MB")
+print(object.size(News), units = "MB")
+print(object.size(Twitter), units = "MB")
+```
+
+Summary statistics for each data set
+```{r, echo = TRUE, eval = FALSE}
+CountBlogs <- Blogs %>% 
+        mutate(line = row_number(), lineLength = str_length(text)) %>%
+        summarise(
+                id = "Blogs"
+                ,`N. of Lines` = n()
+                , mean = mean(lineLength)
+                , sd = sd(lineLength)
+                , median = median(lineLength)
+                , min = min(lineLength)
+                , `Longest Line` = max(lineLength)
+                )
+
+CountNews <- News %>% 
+        mutate(line = row_number(), lineLength = str_length(text)) %>%
+        summarise(
+                id = "News"
+                ,`N. of Lines` = n()
+                , mean = mean(lineLength)
+                , sd = sd(lineLength)
+                , median = median(lineLength)
+                , min = min(lineLength)
+                , `Longest Line` = max(lineLength)
+                )
+
+CountTwitter <- Twitter %>% 
+        mutate(line = row_number(), lineLength = str_length(text)) %>%
+        summarise(
+                id = "Twitter"
+                ,`N. of Lines` = n()
+                , mean = mean(lineLength)
+                , sd = sd(lineLength)
+                , median = median(lineLength)
+                , min = min(lineLength)
+                , `Longest Line` = max(lineLength)
+                )
+
+CountAll <- rbind(CountBlogs, CountNews, CountTwitter) %>% mutate(`size (Mb)` = c("255.4", "257.3", "319.4"))
+```
+
+Compare total unigrams between groups (blogs, news and twitter)
+```{r, echo = TRUE, eval = FALSE}
+wordToken %>%
+        group_by(id) %>%
+        summarise(total = sum(n)) %>%
+        ggplot(aes(x = as.factor(id), y = total, fill = id)) +
+        geom_text(aes(label = total), vjust = -0.5) +
+        geom_col(show.legend = FALSE) +
+        labs(title = "Total unigrams/words by source id", x = "source/id") +
+        theme_fivethirtyeight()
+```
+
+**Unigrams**
+```{r, eval = FALSE}
+UniGram <- GetGrams(cleanTrain, 1)
+head(UniGram, 3)
+```
+
+**Bigrams**
+```{r, eval = FALSE}
+BiGram <- GetGrams(cleanTrain, 2)
+head(BiGram, 3)
+```
+
+**Trigrams**
+```{r, eval = FALSE}
+TriGram <- GetGrams(cleanTrain, 3)
+head(TriGram, 3)
+```
+
+**Tetragrams**
+```{r, eval = FALSE}
+TetraGram <- GetGrams(cleanTrain, 4)
+head(TetraGram, 3)
+```
+
+**Pentagrams**
+```{r, eval = FALSE}
+PentaGram <- GetGrams(cleanTrain, 5)
+head(PentaGram, 3)
+```
+
+Plot word proportions distribution by id
+```{r echo = TRUE, eval = FALSE}
+ggplot(corpus_words, aes(n/total, fill = id)) +  
+        geom_histogram(show.legend = FALSE) + 
+        xlim(NA, 0.000009) + 
+        facet_wrap(~id, ncol = 3, scales = "free_y")
+```
+
+Word proportions
+```{r, echo = TRUE, eval = FALSE}
+UniProp <- termProp(UniGram)
+BiProp <- termProp(BiGram)
+TriProp <- termProp(TriGram)
+TetraProp <- termProp(TetraGram)
+PentaProp <- termProp(PentaGram)
+```
+
+Visualizing a network of all bigrams 
+```{r, eval = FALSE, echo = TRUE}
+set.seed(2017)
+
+ggraph(bigram_all_graph, layout = "fr") +
+        geom_edge_link(aes(edge_alpha = n), arrow = arrow(length = unit(.10, "inches"), type = "closed")) +
+        geom_node_point(color = "darkgreen", alpha = 0.5, size = 3) +
+        geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
+        ggtitle("Most common bigrams in Twitter, Blogs and News (including stopwords)", subtitle = "Each bigram occurs more than 3642 times") +
+        theme_void()
+```
+
+```{r, echo = TRUE, eval = FALSE}
+pentagram_all_graph <- PentaProp_top %>%
+        graph_from_data_frame()
+```
+
+Visualizing a network of all pentagrams 
+```{r, eval = FALSE, echo = TRUE}
+set.seed(2017)
+
+ggraph(pentagram_all_graph, layout = "fr") +
+        geom_edge_link(aes(edge_alpha = n), arrow = arrow(length = unit(.10, "inches"), type = "closed")) +
+        geom_node_point(color = "darkgreen", alpha = 0.5, size = 3) +
+        geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
+        ggtitle("Word prediction with pentagrams in Twitter, Blogs and News (including stopwords)", subtitle = "Each pentagram occurs more than 9 times") +
+        theme_void()
+```
