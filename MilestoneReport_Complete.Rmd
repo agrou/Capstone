@@ -43,6 +43,7 @@ library(gridExtra)
 library(igraph)
 library(ggraph)
 library(purrr)
+library(pander)
 ```
 
 Read the data
@@ -93,13 +94,11 @@ sampleCorpus <- sample_frac(Corpus, 0.1)
 dim(sampleCorpus)
 ```
 
-`sampleCorpus` has the three samples of each text corpus/sources together which corresponds to 10% of the original text corpus. 
-
-The sample is then splited into Training (80%) and Test set(20%). 
+`sampleCorpus` has the three samples of each text corpus/sources together which corresponds to 10% of the original text corpus. The sample is split into a Training set (80%) and a Test set (20%). 
 ```{r}
 set.seed(2017)
 Train <- sampleCorpus %>% sample_frac(0.8)
-Test  <- anti_join(sampleCorpus, Train)
+Test  <- anti_join(sampleCorpus, Train, by = c("id", "text"))
 ```
 
 # Data Cleaning and Tokenization
