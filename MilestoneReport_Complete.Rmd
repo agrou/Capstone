@@ -42,7 +42,6 @@ library(ggthemes)
 library(gridExtra)
 library(igraph)
 library(ggraph)
-library(purrr)
 library(pander)
 ```
 
@@ -82,62 +81,47 @@ CountAll <- Corpus %>%
                 , `Longest Line` = max(lineLength)
                 )
 
-pander::pander(CountAll)
+pander(CountAll)
 ```
 
+# Data Cleaning and Tokenization
 
 As the data is too large to process a random sample of 10% will be taken.
 ```{r}
 set.seed(7067729)
 # sample each dataset
-sampleCorpus <- sample_frac(Corpus, 0.1)
-dim(sampleCorpus)
-```
-
-`sampleCorpus` has the three samples of each text corpus/sources together which corresponds to 10% of the original text corpus. The sample is split into a Training set (80%) and a Test set (20%). 
-```{r}
-set.seed(2017)
-Train <- sampleCorpus %>% sample_frac(0.8)
-Test  <- anti_join(sampleCorpus, Train, by = c("id", "text"))
-```
-
-# Data Cleaning and Tokenization
-```{r data cleaning, tidy = TRUE}
-cleanAll <- function(text_set){
-        # rename the dataset/variable names
-        text_clean <- text_set %>%
+# Clean the whole sample in one go before spliting it into a training and test sets
+# Replace "unusual" characters with a space
+sampleCorpus <- sample_frac(Corpus, 0.1) %>%
                 mutate(id = str_replace_all(id, c("en_US.twitter.txt" = "Twitter", 
                                              "en_US.news.txt" = "News",
-                                             "en_US.blogs.txt" = "Blogs")), 
-                        #replace strange characters with a space
-               text = str_replace_all(text, "[\r?\n|\røØ\\/\\#:)!?^~&=]|[^a-zA-Z0-9 ']|\\_|\\b[aeiou]{2,}\\b|'\\s+", ""),
-               text = tolower(text)
-               ) 
-        return(text_clean)
-}
-# clean Training data set
-cleanTrain <- cleanAll(Train)
-# clean Testing data set
-cleanTest <- cleanAll(Test)
+                                             "en_US.blogs.txt" = "Blogs"))) %>% 
+               mutate(text = str_replace_all(text, "[\r?\n|\røØ\\/\\#:)!?^~&=]|[^a-zA-Z0-9 ']|\\_|\\b[aeiou]{2,}\\b|'\\s+", "")) %>%
+               mutate(text = tolower(text))
+
+dim(sampleCorpus)
+```
+Splitting `sampleCorpus` into a Training set (80%) and a Test set (20%). 
+```{r}
+set.seed(2017)
+cleanTrain <- sampleCorpus %>% sample_frac(0.8)
+cleanTest  <- anti_join(sampleCorpus, cleanTrain, by = c("id", "text"))
 ```
 
-Save the file to save memory loading it if needed
+Save the file for future reuse.
 ```{r, eval = FALSE}
 save(cleanTrain, file = 'cleanTrain.RData')
+
+# Some cleaning to free up memory that could be useful later.
+ rm(Corpus)
 ```
 
 
 # Exploratory Data Analysis
 
-How many sentences for each dataset (Train set and Test set)?
-```{r, eval = FALSE}
-length(cleanTrain$text)
-length(cleanTest$text)
-```
-
 ### Some words are more frequent than others - what are the distributions of word frequencies?
 
-I start by transforming the text into single tokens (words/Unigrams).
+The first step is to transform the text into single tokens (words/Unigrams).
 
 **words**
 ```{r}
@@ -164,7 +148,7 @@ wordToken %>%
         ggplot(aes(x = as.factor(id), y = total, fill = id)) +
         geom_text(aes(label = total), vjust = -0.5) +
         geom_col(show.legend = FALSE) +
-        labs(title = "Total unigrams/words by id", x = "") +
+        labs(title = "Total unigrams (words) by id", x = "") +
         theme_hc()
 ```
 
@@ -196,31 +180,31 @@ GetGrams <- function(clean_set, value){
 **Unigrams**
 ```{r, echo = FALSE}
 UniGram <- GetGrams(cleanTrain, 1)
-head(UniGram, 3)
+pander(head(UniGram, 3))
 ```
 
 **Bigrams**
 ```{r, echo = FALSE}
 BiGram <- GetGrams(cleanTrain, 2)
-head(BiGram, 3)
+pander(head(BiGram, 3))
 ```
 
 **Trigrams**
 ```{r, echo = FALSE}
 TriGram <- GetGrams(cleanTrain, 3)
-head(TriGram, 3)
+pander(head(TriGram, 3))
 ```
 
 **Tetragrams**
 ```{r, echo = FALSE}
 TetraGram <- GetGrams(cleanTrain, 4)
-head(TetraGram, 3)
+pander(head(TetraGram, 3))
 ```
 
 **Pentagrams**
 ```{r, echo = FALSE}
 PentaGram <- GetGrams(cleanTrain, 5)
-head(PentaGram, 3)
+pander(head(PentaGram, 3))
 ```
 
 
@@ -235,7 +219,7 @@ pander::pander(TotalWords)
 ```
 
 ```{r, echo = FALSE}
-corpus_words <- left_join(wordToken, TotalWords)
+corpus_words <- left_join(wordToken, TotalWords, by = "id")
 ```
 
 `n` is the number of times that the word is used in each data set (Twitter, Blogs, News). To look at the distribution of `n/total` for each data set we use the number of times a word appears divided by the total number of terms (words) in that set, which corresponds to the term frequency.
@@ -250,7 +234,7 @@ ggplot(corpus_words, aes(n/total, fill = id)) +
 
 The plots exhibit similar distributions for the three data sets. There are many words that occur rarely and fewer that occur frequently. Zip's law states that the frequency that a word appears is inversely proportional to its rank. Thus we consider the proportion of word counts and the cumulative proportion as a probability of word appearance in the text corpus. If we consider 50% of the data it will still cover enough words for prediction.
 
-```{r, echo = TRUE}
+```{r, echo = FALSE}
 # term frequencies and proportion
 termProp <- function(xgrams){
         tfreq <- xgrams %>% 
@@ -260,14 +244,18 @@ termProp <- function(xgrams){
                         #create variable to easily see how many words correspond to the previous calculation
                rank = row_number(), 
                #calculate the cumulative sum of the proportions
-               cumprop = cumsum(prop)*100) %>%  
+               cumprop = cumsum(prop)) %>%  
                 #order proportions by descent order
-        arrange(cumprop) %>% 
-                filter(cumprop <= 50.1) 
+                arrange(cumprop) %>% 
+                filter(cumprop <= 0.501) 
+        
+        w50 <- nrow(tfreq)
+        cat("\n For", deparse(substitute(xgrams)), w50, "words cover 50% of all word instances." )
         return(tfreq)
 }
 ``` 
-```{r, echo = FALSE}
+```{r, echo = TRUE}
+# [SB Note Delete] I don't know if you need to go beyod UniGram
 UniProp <- termProp(UniGram)
 BiProp <- termProp(BiGram)
 TriProp <- termProp(TriGram)
@@ -277,7 +265,7 @@ PentaProp <- termProp(PentaGram)
 ```{r}
 head(PentaProp)
 ```
-The number of rows (rank) gives us the top 152 unique words that could be used to cover 50% of all word instances in the language. In a frequency sorted disctionary, 50% should be enough to cover all word instances. This is also shown in the histograms above, where the plots present a long tail, with half of the observations skewed. 
+The number of rows (rank) gives us the top r dim(UniGram)[1]` unique words that could be used to cover 50% of all word instances in the language. In a frequency sorted disctionary, 50% should be enough to cover all word instances. This is also shown in the histograms above, where the plots present a long tail, with half of the observations skewed. 
 
 
 Save ngrams into a single file for memory efficiency
@@ -340,8 +328,6 @@ Visualizing a network of all bigrams
 
 
 ```{r, echo = FALSE}
-set.seed(2017)
-
 ggraph(bigram_all_graph, layout = "fr") +
         geom_edge_link(aes(edge_alpha = n), arrow = arrow(length = unit(.10, "inches"), type = "closed")) +
         geom_node_point(color = "darkgreen", alpha = 0.5, size = 3) +
@@ -371,8 +357,6 @@ Visualizing a network of all pentagrams
 
 
 ```{r, echo = FALSE}
-set.seed(2017)
-
 ggraph(pentagram_all_graph, layout = "fr") +
         geom_edge_link(aes(edge_alpha = n), arrow = arrow(length = unit(.10, "inches"), type = "closed")) +
         geom_node_point(color = "darkgreen", alpha = 0.5, size = 3) +
@@ -407,144 +391,3 @@ For this report I used:
 http://tidytextmining.com/
 * Feinerer, Hornik and Meyer. Text Mining Infrastructure in R. Journal of Statistical Software. 2008 (https://www.jstatsoft.org/article/view/v025i05)
 * https://web.stanford.edu/%7Ejurafsky/slp3/4.pdf
-
-
-# Appendix
-
-Below is the code that was used for some of the output above
-
-Object sizes for each data set 
-```{r, eval = FALSE, echo = TRUE}
-print(object.size(Blogs), units = "MB")
-print(object.size(News), units = "MB")
-print(object.size(Twitter), units = "MB")
-```
-
-Summary statistics for each data set
-```{r, echo = TRUE, eval = FALSE}
-CountBlogs <- Blogs %>% 
-        mutate(line = row_number(), lineLength = str_length(text)) %>%
-        summarise(
-                id = "Blogs"
-                ,`N. of Lines` = n()
-                , mean = mean(lineLength)
-                , sd = sd(lineLength)
-                , median = median(lineLength)
-                , min = min(lineLength)
-                , `Longest Line` = max(lineLength)
-                )
-
-CountNews <- News %>% 
-        mutate(line = row_number(), lineLength = str_length(text)) %>%
-        summarise(
-                id = "News"
-                ,`N. of Lines` = n()
-                , mean = mean(lineLength)
-                , sd = sd(lineLength)
-                , median = median(lineLength)
-                , min = min(lineLength)
-                , `Longest Line` = max(lineLength)
-                )
-
-CountTwitter <- Twitter %>% 
-        mutate(line = row_number(), lineLength = str_length(text)) %>%
-        summarise(
-                id = "Twitter"
-                ,`N. of Lines` = n()
-                , mean = mean(lineLength)
-                , sd = sd(lineLength)
-                , median = median(lineLength)
-                , min = min(lineLength)
-                , `Longest Line` = max(lineLength)
-                )
-
-CountAll <- rbind(CountBlogs, CountNews, CountTwitter) %>% mutate(`size (Mb)` = c("255.4", "257.3", "319.4"))
-```
-
-Compare total unigrams between groups (blogs, news and twitter)
-```{r, echo = TRUE, eval = FALSE}
-wordToken %>%
-        group_by(id) %>%
-        summarise(total = sum(n)) %>%
-        ggplot(aes(x = as.factor(id), y = total, fill = id)) +
-        geom_text(aes(label = total), vjust = -0.5) +
-        geom_col(show.legend = FALSE) +
-        labs(title = "Total unigrams/words by source id", x = "source/id") +
-        theme_fivethirtyeight()
-```
-
-**Unigrams**
-```{r, eval = FALSE}
-UniGram <- GetGrams(cleanTrain, 1)
-head(UniGram, 3)
-```
-
-**Bigrams**
-```{r, eval = FALSE}
-BiGram <- GetGrams(cleanTrain, 2)
-head(BiGram, 3)
-```
-
-**Trigrams**
-```{r, eval = FALSE}
-TriGram <- GetGrams(cleanTrain, 3)
-head(TriGram, 3)
-```
-
-**Tetragrams**
-```{r, eval = FALSE}
-TetraGram <- GetGrams(cleanTrain, 4)
-head(TetraGram, 3)
-```
-
-**Pentagrams**
-```{r, eval = FALSE}
-PentaGram <- GetGrams(cleanTrain, 5)
-head(PentaGram, 3)
-```
-
-Plot word proportions distribution by id
-```{r echo = TRUE, eval = FALSE}
-ggplot(corpus_words, aes(n/total, fill = id)) +  
-        geom_histogram(show.legend = FALSE) + 
-        xlim(NA, 0.000009) + 
-        facet_wrap(~id, ncol = 3, scales = "free_y")
-```
-
-Word proportions
-```{r, echo = TRUE, eval = FALSE}
-UniProp <- termProp(UniGram)
-BiProp <- termProp(BiGram)
-TriProp <- termProp(TriGram)
-TetraProp <- termProp(TetraGram)
-PentaProp <- termProp(PentaGram)
-```
-
-Visualizing a network of all bigrams 
-```{r, eval = FALSE, echo = TRUE}
-set.seed(2017)
-
-ggraph(bigram_all_graph, layout = "fr") +
-        geom_edge_link(aes(edge_alpha = n), arrow = arrow(length = unit(.10, "inches"), type = "closed")) +
-        geom_node_point(color = "darkgreen", alpha = 0.5, size = 3) +
-        geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
-        ggtitle("Most common bigrams in Twitter, Blogs and News (including stopwords)", subtitle = "Each bigram occurs more than 3642 times") +
-        theme_void()
-```
-
-```{r, echo = TRUE, eval = FALSE}
-pentagram_all_graph <- PentaProp_top %>%
-        graph_from_data_frame()
-```
-
-Visualizing a network of all pentagrams 
-```{r, eval = FALSE, echo = TRUE}
-set.seed(2017)
-
-ggraph(pentagram_all_graph, layout = "fr") +
-        geom_edge_link(aes(edge_alpha = n), arrow = arrow(length = unit(.10, "inches"), type = "closed")) +
-        geom_node_point(color = "darkgreen", alpha = 0.5, size = 3) +
-        geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
-        ggtitle("Word prediction with pentagrams in Twitter, Blogs and News (including stopwords)", subtitle = "Each pentagram occurs more than 9 times") +
-        theme_void()
-```
