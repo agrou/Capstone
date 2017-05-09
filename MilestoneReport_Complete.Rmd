@@ -255,7 +255,6 @@ termProp <- function(xgrams){
 }
 ``` 
 ```{r, echo = TRUE}
-# [SB Note Delete] I don't know if you need to go beyod UniGram
 UniProp <- termProp(UniGram)
 BiProp <- termProp(BiGram)
 TriProp <- termProp(TriGram)
