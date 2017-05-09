@@ -51,18 +51,11 @@ library(ggraph)
 Read the data
 ```{r read data}
 # Load the three data sets together
-
 enUS_folder <- "Data/final/en_US/"
- 
-# create a function to read the three documents in the same file
-read_folder <- function(infolder){
-        tibble(file = dir(infolder, full.names = TRUE)) %>% 
-               mutate(text = map(file, read_lines)) %>% 
-               transmute(id = basename(file), text) %>% 
-               unnest(text)
-}
-
-Corpus <- read_folder(enUS_folder)
+Corpus <- tibble(file = dir(enUS_folder, full.names = TRUE)) %>% 
+          mutate(text = map(file, read_lines)) %>% 
+          transmute(id = basename(file), text) %>% 
+          unnest(text)
 ```
 The 3 files combined have 4597879 lines. 
 
