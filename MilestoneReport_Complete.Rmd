@@ -42,6 +42,7 @@ library(ggthemes)
 library(gridExtra)
 library(igraph)
 library(ggraph)
+library(purrr)
 ```
 
 Read the data
@@ -52,34 +53,27 @@ Corpus <- tibble(file = dir(enUS_folder, full.names = TRUE)) %>%
           mutate(text = map(file, read_lines)) %>% 
           transmute(id = basename(file), text) %>% 
           unnest(text)
+
+# Print the file sizes and the Corpus object size
+print(object.size(Corpus), units = "MB")
+
+fileSizes <- tibble(
+             id = list.files(enUS_folder),
+             size = file.size(list.files(enUS_folder, full.names = TRUE))) %>%
+             mutate(sizeMb = size/1024)
+pander::pander(fileSizes)
 ```
-The 3 files combined have 4597879 lines. 
+The 3 files combined have `r dim(Corpus)[1]` lines. 
 
 # Data Processing
 
-For computational memory efficiency we can sub-sample each corpus (Twitter, Blogs, News). Thus we take a random sample of 10% of the corpus. 
-
-We start by separating the text corpus by id, in three data sets
-```{r}
-# Separate the text corpus in three data sets by id
-Blogs <- Corpus %>% filter(id == "en_US.blogs.txt")  
-News <- Corpus %>% filter(id == "en_US.news.txt")
-Twitter <- Corpus %>% filter(id == "en_US.twitter.txt")
-```
-
-Object sizes for each data set 
-```{r, eval = FALSE, echo = FALSE}
-print(object.size(Blogs), units = "MB")
-print(object.size(News), units = "MB")
-print(object.size(Twitter), units = "MB")
-```
-
-```{r, echo = FALSE}
-CountBlogs <- Blogs %>% 
+The table below presents the total number of lines per each data set or source. The mean, sd, median, min, Longest Line (max) are also presented string counts. The longest line represents the line with most string characters. It should be noted that the twitter string count can only have a maximum of 140 characters. 
+```{r, echo=FALSE}
+CountAll <- Corpus %>% 
         mutate(line = row_number(), lineLength = str_length(text)) %>%
+        group_by(id) %>%
         summarise(
-                id = "Blogs"
-                ,`N. of Lines` = n()
+                `N. of Lines` = n()
                 , mean = mean(lineLength)
                 , sd = sd(lineLength)
                 , median = median(lineLength)
@@ -87,48 +81,15 @@ CountBlogs <- Blogs %>%
                 , `Longest Line` = max(lineLength)
                 )
 
-CountNews <- News %>% 
-        mutate(line = row_number(), lineLength = str_length(text)) %>%
-        summarise(
-                id = "News"
-                ,`N. of Lines` = n()
-                , mean = mean(lineLength)
-                , sd = sd(lineLength)
-                , median = median(lineLength)
-                , min = min(lineLength)
-                , `Longest Line` = max(lineLength)
-                )
-
-CountTwitter <- Twitter %>% 
-        mutate(line = row_number(), lineLength = str_length(text)) %>%
-        summarise(
-                id = "Twitter"
-                ,`N. of Lines` = n()
-                , mean = mean(lineLength)
-                , sd = sd(lineLength)
-                , median = median(lineLength)
-                , min = min(lineLength)
-                , `Longest Line` = max(lineLength)
-                )
-
-CountAll <- rbind(CountBlogs, CountNews, CountTwitter) %>% mutate(`size (Mb)` = c("255.4", "257.3", "319.4"))
-```
-
-Summary statistics for the raw data 
-```{r, echo = FALSE}
 pander::pander(CountAll)
 ```
-The table presents the total number of lines per each data set or source. The mean, sd, median, min, Longest Line (max) are descriptive statistics for string counts. The longest line represents the line with more string characters. As expected it does not come from twitter. 
 
-Sample 10% of each text corpus
+
+As the data is too large to process a random sample of 10% will be taken.
 ```{r}
-set.seed(2017)
+set.seed(7067729)
 # sample each dataset
-Sblogs <- Blogs %>% sample_frac(0.1) 
-Snews <- News %>% sample_frac(0.1)
-Stwitter <- Twitter %>% sample_frac(0.1)
-# get the three datasets into a single dataset
-sampleCorpus <- bind_rows(Sblogs, Snews, Stwitter)
+sampleCorpus <- sample_frac(Corpus, 0.1)
 dim(sampleCorpus)
 ```
 
