@@ -264,7 +264,7 @@ PentaProp <- termProp(PentaGram)
 ```{r}
 head(PentaProp)
 ```
-The number of rows (rank) gives us the top r dim(UniGram)[1]` unique words that could be used to cover 50% of all word instances in the language. In a frequency sorted disctionary, 50% should be enough to cover all word instances. This is also shown in the histograms above, where the plots present a long tail, with half of the observations skewed. 
+The number of rows (rank) gives us the top `r dim(UniGram)[1]` unique words that could be used to cover 50% of all word instances in the language. In a frequency sorted disctionary, 50% should be enough to cover all word instances. This is also shown in the histograms above, where the plots present a long tail, with half of the observations skewed. 
 
 
 Save ngrams into a single file for memory efficiency
@@ -310,12 +310,13 @@ TriProp_split <- TriProp %>%
                         separate(sentence, c("word1", "word2", "word3"), sep = " ")
 ```
 
-```{r}
+
+```{r, echo = FALSE}
 # Top observations: below 5% (unique words that appear more times)
-BiGrams_top <- BiProp_split %>% filter(cumprop < 5)  
-tail(BiGrams_top)
+BiGrams_top <- BiProp_split %>% filter(cumprop < 0.05) 
+nrow(BiGrams_top)
 ```
-5% of bigrams(BiProp_split) correspond to words tha appear more than 3642 times in the text corpus. That's what we use in the Markov network visualization below.
+15% of bigrams(BiProp_split) correspond r nrow(BiGrams_top)` words. That's what we use in the Markov network visualization below.
 
 Use all bigrams to build a suitable data frame to be used with a visualization of Markov chains
 ```{r}
@@ -323,7 +324,7 @@ bigram_all_graph <- BiGrams_top %>%
         graph_from_data_frame()
 ```
 
-Visualizing a network of all bigrams 
+Visualizing a network with bigrams 
 
 
 ```{r, echo = FALSE}
@@ -343,8 +344,9 @@ PentaProp_split <- PentaProp %>%
 ``` 
 
 ```{r}
-# Top observations: below 5% (unique words that appear more times)
-PentaProp_top <- PentaProp_split %>% filter(cumprop < 0.05)
+# Top observations: unique words that appear more times
+PentaProp_top <- PentaProp_split %>% filter(n > 30)
+PentaProp_top
 ```
 
 ```{r, echo = FALSE}
@@ -352,7 +354,7 @@ pentagram_all_graph <- PentaProp_top %>%
         graph_from_data_frame()
 ```
 
-Visualizing a network of all pentagrams 
+Visualizing a network with pentagrams 
 
 
 ```{r, echo = FALSE}
